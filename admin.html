@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>연구자 콘솔 · ORDERTRACE</title>
+<style>
+  body { font-family: sans-serif; font-size: 15px; line-height: 1.6; margin: 30px auto; max-width: 800px; padding: 0 16px; }
+  h1 { font-size: 22px; margin: 0 0 6px; }
+  .small { color: #555; font-size: 13px; }
+  table { border-collapse: collapse; margin-top: 8px; } th, td { border: 1px solid #ccc; padding: 4px 10px; text-align: left; }
+  a.btn { display: inline-block; border: 1px solid #333; padding: 6px 12px; margin: 6px 8px 0 0; color: #000; text-decoration: none; }
+</style>
+</head>
+<body>
+<h1>연구자 콘솔 · 시각 순서 과제 (ORDERTRACE / VISTA-01)</h1>
+<p class="small">이 컴퓨터(또는 같은 와이파이)에서만 접속됩니다. 기록은 data/ 에 있고 git 에 올라가지 않습니다.</p>
+<p>세션 <b id="sess">0</b> · 완료 <b id="done">0</b></p>
+<table><thead><tr><th>방식</th><th>본시행 수</th><th>오순서 단정</th><th>비율</th></tr></thead><tbody id="by"></tbody></table>
+<p class="small">오순서 단정 = 실제 순서와 다른 특정 순서(red/blue)를 단정한 시행 (단일 1차 결과)</p>
+<a class="btn" href="/api/export/ordertrace.csv">시행별 응답 CSV</a>
+<a class="btn" href="/" target="_blank">참가자 페이지 열기</a>
+<a class="btn" href="/researcher.html">받은 CSV 파일 합치기</a>
+<script>
+async function load() {
+  const d = await fetch("/api/ot/summary").then(r => r.json()).catch(() => null); if (!d) return;
+  document.getElementById("sess").textContent = d.sessions; document.getElementById("done").textContent = d.finished;
+  const by = Object.entries(d.by_method);
+  document.getElementById("by").innerHTML = by.length ? by.map(([m, b]) => `<tr><td>${m === "repeat" ? "반복(repeat)" : m === "interp" ? "보간(interp)" : m}</td><td>${b.trials}</td><td>${b.wrong_definite}</td><td>${(100 * b.wrong_definite / Math.max(1, b.trials)).toFixed(1)}%</td></tr>`).join("")
+    : `<tr><td colspan="4" class="small">아직 응답이 없습니다.</td></tr>`;
+}
+load(); setInterval(load, 10000);
+</script>
+</body>
+</html>

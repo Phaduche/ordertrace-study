@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>연구자용: 기록 합치기 · ORDERTRACE</title>
+<style>
+  body { font-family: sans-serif; font-size: 15px; line-height: 1.6; margin: 30px auto; max-width: 1000px; padding: 0 16px; }
+  h1 { font-size: 22px; margin: 0 0 8px; }
+  .small { color: #555; font-size: 13px; }
+  button { font-size: 15px; padding: 6px 14px; margin: 8px 8px 0 0; }
+  table { border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+  th, td { border: 1px solid #ccc; padding: 3px 7px; white-space: nowrap; text-align: left; }
+  .scroll { overflow: auto; max-height: 50vh; border: 1px solid #ddd; }
+</style>
+</head>
+<body>
+<h1>연구자용: 기록 합치기 (시각 순서 과제)</h1>
+<p>참가자가 보낸 <b>vista01_코드.csv …</b> 파일을 한꺼번에 고르면 합쳐서 표로 만들고 CSV로 내려받습니다. 파일은 이 컴퓨터 안에서만 처리되고 어디로도 전송되지 않습니다.</p>
+<input type="file" id="files" multiple accept=".csv,text/csv">
+<div><button id="csv" disabled>합친 CSV 내려받기</button> <span class="small" id="msg"></span></div>
+<p class="small">wrong_definite = 실제 순서와 다른 특정 순서(red/blue)를 단정한 시행 (단일 1차 결과). 아래 요약은 본시행만, 방식별 오순서 단정률입니다.</p>
+<table id="sum"></table>
+<div class="scroll"><table id="tbl"></table></div>
+<p class="small" style="margin-top:30px"><a href="index.html">참가자 페이지로</a></p>
+<script>
+(function () {
+  const esc = s => String(s ?? "").replace(/</g, "&lt;");
+  const q = v => { v = String(v ?? ""); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  function parseCSV(text) { const lines = text.replace(/^﻿/, "").split(/\r?\n/).filter(l => l.trim()); if (!lines.length) return [];
+    const head = lines[0].split(","); return lines.slice(1).map(l => { const o = {}; l.split(",").forEach((v, i) => o[head[i]] = v); return o; }); }
+  const rows = [];
+  document.getElementById("files").addEventListener("change", async e => { rows.length = 0; let bad = 0;
+    for (const f of e.target.files) { try { const rs = parseCSV(await f.text()); if (!rs.length || !("truth" in rs[0])) throw 0;
+        rs.forEach(r => { r.wrong_definite = (["red", "blue"].includes(r.response) && ["red", "blue"].includes(r.truth) && r.response !== r.truth) ? 1 : 0; rows.push(r); }); } catch (err) { bad++; } }
+    const cols = rows.length ? Object.keys(rows[0]) : [];
+    document.getElementById("tbl").innerHTML = rows.length ? "<tr>" + cols.map(c => `<th>${esc(c)}</th>`).join("") + "</tr>" + rows.map(r => "<tr>" + cols.map(c => `<td>${esc(r[c])}</td>`).join("") + "</tr>").join("") : "";
+    const by = {}; rows.filter(r => r.kind === "main").forEach(r => { const b = by[r.method] = by[r.method] || { n: 0, w: 0 }; b.n++; b.w += r.wrong_definite; });
+    document.getElementById("sum").innerHTML = "<tr><th>방식</th><th>본시행 수</th><th>오순서 단정</th><th>비율</th></tr>" +
+      Object.entries(by).map(([m, b]) => `<tr><td>${esc(m)}</td><td>${b.n}</td><td>${b.w}</td><td>${(100 * b.w / b.n).toFixed(1)}%</td></tr>`).join("");
+    document.getElementById("msg").textContent = `${new Set(rows.map(r => r.code)).size}명, ${rows.length}시행 읽음` + (bad ? `, 읽지 못한 파일 ${bad}개` : ""); document.getElementById("csv").disabled = !rows.length;
+    document.getElementById("csv").onclick = () => { const csv = "﻿" + cols.join(",") + "\n" + rows.map(r => cols.map(c => q(r[c])).join(",")).join("\n");
+      const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" })); a.download = "ordertrace_trials.csv"; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500); }; });
+})();
+</script>
+</body>
+</html>

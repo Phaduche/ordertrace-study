@@ -1,0 +1,42 @@
+# main 에 push 되면 참가자 과제 페이지(자극 포함)와 연구자용 기록 합치기 페이지를 GitHub Pages 로 배포한다.
+# 서버와 참가자 기록은 배포하지 않는다.
+name: Deploy pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build site
+        run: |
+          mkdir -p _site
+          cp index.html task.js style.css researcher.html _site/
+          cp -r stimuli _site/stimuli
+          touch _site/.nojekyll
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
